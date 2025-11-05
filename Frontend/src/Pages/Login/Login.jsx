@@ -10,6 +10,14 @@ const API = axios.create({
   withCredentials: true,
 });
 
+// Persist Authorization header across reloads (if token exists)
+if (typeof window !== "undefined") {
+  const storedToken = localStorage.getItem("token");
+  if (storedToken) {
+    API.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
+  }
+}
+
 const Login = () => {
   const [isHovered, setIsHovered] = useState(false); // State for hover effect
   const [email, setEmail] = useState("");
