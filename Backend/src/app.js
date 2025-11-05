@@ -1,11 +1,4 @@
-import express from "express";
-import cors from "cors";
-import cookieParser from "cookie-parser";
-import passport from "passport";
-
-const app = express();
-
-// Backend/src/app.js (replace existing cors setup)
+// Backend/src/app.js
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -21,9 +14,8 @@ const allowedOrigins = rawOrigins.split(",").map((s) => s.trim().replace(/\/$/, 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // allow requests with no origin like mobile apps or curl
+      // allow requests with no origin like curl / server-to-server
       if (!origin) return callback(null, true);
-      // allow if origin is in our list
       const cleaned = origin.replace(/\/$/, "");
       if (allowedOrigins.indexOf(cleaned) !== -1) {
         return callback(null, true);
@@ -41,8 +33,7 @@ app.use(express.static("public"));
 app.use(cookieParser());
 app.use(passport.initialize());
 
-// ... routes below unchanged
-
+// Import routes
 import userRouter from "./routes/user.routes.js";
 import authRouter from "./routes/auth.routes.js";
 import chatRouter from "./routes/chat.routes.js";
@@ -51,6 +42,7 @@ import requestRouter from "./routes/request.routes.js";
 import reportRouter from "./routes/report.routes.js";
 import ratingRouter from "./routes/rating.routes.js";
 
+// Use routes
 app.use("/user", userRouter);
 app.use("/auth", authRouter);
 app.use("/chat", chatRouter);
