@@ -1,15 +1,22 @@
-import { toast } from "react-toastify";
+// frontend/src/util/ApiCall.jsx
 import axios from "axios";
+import { toast } from "react-toastify";
 
 const API = axios.create({
   baseURL: import.meta.env.VITE_SERVER_URL || "",
-  withCredentials: true, // include cookies for auth flows
+  withCredentials: true,
 });
+
+// persistent header: if a token exists in localStorage, attach it
+if (typeof window !== "undefined") {
+  const storedToken = localStorage.getItem("token");
+  if (storedToken) {
+    API.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
+  }
+}
 
 const ApiCall = async (url, method, navigate, setUser, data) => {
   console.log("******** Inside ApiCall function ********");
-
-  const safeErrorStatus = (err) => (err && err.response && err.response.status) || null;
 
   if (method === "GET") {
     try {
@@ -18,7 +25,7 @@ const ApiCall = async (url, method, navigate, setUser, data) => {
     } catch (error) {
       console.error("Error in API call:", error);
       setUser && setUser(null);
-      const status = safeErrorStatus(error);
+      const status = error?.response?.status;
       if (status === 401) {
         toast.error("You are not authorized to access this page. Please login first.");
         navigate && navigate("/login");
@@ -40,7 +47,7 @@ const ApiCall = async (url, method, navigate, setUser, data) => {
     } catch (error) {
       console.error("Error in API call:", error);
       setUser && setUser(null);
-      const status = safeErrorStatus(error);
+      const status = error?.response?.status;
       if (status === 401) {
         toast.error("You are not authorized to access this page. Please login first.");
         navigate && navigate("/login");
@@ -51,9 +58,7 @@ const ApiCall = async (url, method, navigate, setUser, data) => {
         toast.error("Server Error. Please try again later.");
         navigate && navigate("/");
       } else {
-        // show server-provided message if available, otherwise generic
-        const msg = (error && error.response && error.response.data && (error.response.data.message || error.response.data.error)) || "An error occurred. Please try again later.";
-        toast.error(msg);
+        toast.error("An error occurred. Please try again later.");
         navigate && navigate("/");
       }
     }
@@ -61,3 +66,4 @@ const ApiCall = async (url, method, navigate, setUser, data) => {
 };
 
 export default ApiCall;
+export { API };
