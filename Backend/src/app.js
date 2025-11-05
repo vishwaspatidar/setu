@@ -6,14 +6,15 @@ import passport from "passport";
 
 const app = express();
 
-// WARNING: This setup allows requests from ANY origin.
-// It's convenient for debugging / previews but not recommended for production.
+// WARNING: permissive CORS for dev / preview convenience.
+// It echoes the incoming origin and allows credentials.
+// For production harden this to an allow-list.
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like curl, Postman, or server-to-server)
+      // allow requests with no origin (curl/postman/server-to-server)
       if (!origin) return callback(null, true);
-      // Echo back the origin — this effectively allows all origins while enabling credentials
+      // echo origin back (allows cookies with credentials)
       return callback(null, true);
     },
     credentials: true,
