@@ -1,3 +1,4 @@
+// frontend/src/Pages/Register/Register.jsx
 import Tab from "react-bootstrap/Tab";
 import Tabs from "react-bootstrap/Tabs";
 import { useState, useEffect } from "react";
@@ -6,15 +7,10 @@ import { toast } from "react-toastify";
 import Spinner from "react-bootstrap/Spinner";
 import Form from "react-bootstrap/Form";
 import { skills } from "./Skills";
-import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
 import "./Register.css";
 import Badge from "react-bootstrap/Badge";
-import { v4 as uuidv4 } from "uuid";
-
-const API = axios.create({
-  baseURL: import.meta.env.VITE_SERVER_URL || "",
-  withCredentials: true, // send cookies for cross-site auth
-});
+import { API } from "../../util/ApiCall.jsx"; // use API so withCredentials & Authorization are applied
 
 const Register = () => {
   const navigate = useNavigate();
@@ -54,9 +50,10 @@ const Register = () => {
     setLoading(true);
     const getUser = async () => {
       try {
+        // use API (configured with withCredentials + header fallback)
         const { data } = await API.get("/user/unregistered/getDetails");
         console.log("User Data: ", data.data);
-        const edu = data?.data?.education;
+        const edu = data?.data?.education || [];
         edu.forEach((ele) => {
           ele.id = uuidv4();
         });
@@ -71,11 +68,10 @@ const Register = () => {
             description: "",
           });
         }
-        const proj = data?.data?.projects;
+        const proj = data?.data?.projects || [];
         proj.forEach((ele) => {
           ele.id = uuidv4();
         });
-        console.log(proj);
         if (proj) {
           setTechStack(proj.map((item) => "Select some Tech Stack"));
         }
@@ -84,8 +80,8 @@ const Register = () => {
           name: data?.data?.name,
           email: data?.data?.email,
           username: data?.data?.username,
-          skillsProficientAt: data?.data?.skillsProficientAt,
-          skillsToLearn: data?.data?.skillsToLearn,
+          skillsProficientAt: data?.data?.skillsProficientAt || [],
+          skillsToLearn: data?.data?.skillsToLearn || [],
           linkedinLink: data?.data?.linkedinLink,
           githubLink: data?.data?.githubLink,
           portfolioLink: data?.data?.portfolioLink,
@@ -94,19 +90,29 @@ const Register = () => {
           projects: proj ? proj : prevState.projects,
         }));
       } catch (error) {
-        console.log(error);
-        if (error?.response?.data?.message) {
-          toast.error(error.response.data.message);
-          navigate("/login");
+        console.log("Register getDetails error:", error);
+        // If the user is not authenticated for unregistered flow, allow manual registration
+        const status = error?.response?.status;
+        if (status === 401) {
+          // Inform user but do NOT redirect to login — allow manual fill and submission
+          toast.info("No registration token found — please fill the form to register or login via Google");
+          // keep form as initial empty state (or you may prefill some fields if desired)
         } else {
-          toast.error("Some error occurred");
+          // For other errors, show message and redirect to login as before
+          if (error?.response?.data?.message) {
+            toast.error(error.response.data.message);
+            navigate("/login");
+          } else {
+            toast.error("Some error occurred");
+            navigate("/login");
+          }
         }
       } finally {
         setLoading(false);
       }
     };
     getUser();
-  }, []);
+  }, [navigate]);
 
   const handleNext = () => {
     const tabs = ["registration", "education", "longer-tab", "Preview"];
@@ -134,7 +140,6 @@ const Register = () => {
         [name]: value,
       }));
     }
-    // console.log("Form: ", form);
   };
 
   const handleAddSkill = (e) => {
@@ -174,7 +179,6 @@ const Register = () => {
         skillsProficientAt: [...prevState.skillsProficientAt, skillsProficientAt],
       }));
     }
-    // console.log("Form: ", form);
   };
 
   const handleRemoveSkill = (e, temp) => {
@@ -190,12 +194,10 @@ const Register = () => {
         skillsToLearn: prevState.skillsToLearn.filter((item) => item !== skill),
       }));
     }
-    console.log("Form: ", form);
   };
 
   const handleRemoveEducation = (e, tid) => {
     const updatedEducation = form.education.filter((item, i) => item.id !== tid);
-    console.log("Updated Education: ", updatedEducation);
     setForm((prevState) => ({
       ...prevState,
       education: updatedEducation,
@@ -208,18 +210,14 @@ const Register = () => {
       ...prevState,
       education: prevState.education.map((item, i) => (i === index ? { ...item, [name]: value } : item)),
     }));
-    console.log("Form: ", form);
   };
 
   const handleAdditionalChange = (e, index) => {
     const { name, value } = e.target;
-    console.log("Name", name);
-    console.log("Value", value);
     setForm((prevState) => ({
       ...prevState,
       projects: prevState.projects.map((item, i) => (i === index ? { ...item, [name]: value } : item)),
     }));
-    console.log("Form: ", form);
   };
 
   const validateRegForm = () => {
@@ -256,29 +254,30 @@ const Register = () => {
     return true;
   };
   const validateEduForm = () => {
+    let ok = true;
     form.education.forEach((edu, index) => {
       if (!edu.institution) {
         toast.error(`Institution name is empty in education field ${index + 1}`);
-        return false;
+        ok = false;
       }
       if (!edu.degree) {
         toast.error("Degree is empty");
-        return false;
+        ok = false;
       }
       if (!edu.startDate) {
         toast.error("Start date is empty");
-        return false;
+        ok = false;
       }
       if (!edu.endDate) {
         toast.error("End date is empty");
-        return false;
+        ok = false;
       }
       if (!edu.score) {
         toast.error("Score is empty");
-        return false;
+        ok = false;
       }
     });
-    return true;
+    return ok;
   };
   const validateAddForm = () => {
     if (!form.bio) {
@@ -320,7 +319,6 @@ const Register = () => {
         flag = false;
       }
       if (!project.projectLink.match(/^(http|https):\/\/[^ "]+$/)) {
-        console.log("Valid URL");
         toast.error(`Please provide valid project link in project ${index + 1}`);
         flag = false;
       }
@@ -370,7 +368,6 @@ const Register = () => {
     const check1 = validateRegForm();
     const check2 = validateEduForm();
     const check3 = await validateAddForm();
-    console.log(check1, check2, check3);
     if (check1 && check2 && check3) {
       setSaveLoading(true);
       try {
@@ -398,7 +395,6 @@ const Register = () => {
       try {
         const { data } = await API.post("/user/registerUser", form);
         toast.success("Registration Successful");
-        console.log("Data: ", data.data);
         navigate("/discover");
       } catch (error) {
         console.log(error);
