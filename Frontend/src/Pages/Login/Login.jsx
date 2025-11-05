@@ -1,12 +1,52 @@
 import React, { useState } from "react";
 import Button from "react-bootstrap/Button";
 import { FaGoogle } from "react-icons/fa";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+
+const API = axios.create({
+  baseURL: import.meta.env.VITE_SERVER_URL || "",
+  withCredentials: true,
+});
 
 const Login = () => {
   const [isHovered, setIsHovered] = useState(false); // State for hover effect
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:8000/auth/google";
+    // keep this for Google OAuth (optional)
+    // for deployed app, you may want to replace localhost with your Render backend URL
+    const googleUrl = `${import.meta.env.VITE_SERVER_URL || "http://localhost:8000"}/auth/google`;
+    window.location.href = googleUrl;
+  };
+
+  const handleLocalSignin = async (e) => {
+    e && e.preventDefault();
+    if (!email || !password) {
+      toast.error("Please enter email and password");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await API.post("/api/auth/signin", { email, password });
+      // adapt to your ApiResponse shape: token may be in res.data.data.token or res.data.token
+      const token = res?.data?.data?.token || res?.data?.token;
+      if (token) {
+        localStorage.setItem("token", token);
+      }
+      toast.success(res?.data?.message || "Login successful");
+      navigate("/discover");
+    } catch (err) {
+      console.error(err);
+      const msg = err?.response?.data?.message || "Login failed";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const containerStyle = {
@@ -21,7 +61,8 @@ const Login = () => {
   };
 
   const loginBoxStyle = {
-    height: "200px",
+    width: "420px",
+    // keep height flexible for the added form
     display: "flex",
     backgroundColor: "#2d2d2d",
     flexDirection: "column",
@@ -87,15 +128,71 @@ const Login = () => {
       <img src={"/assets/images/1.png"} alt="Above Image" style={imageStyle} />
       <div style={loginBoxStyle}>
         <h1 style={titleStyle}>LOGIN</h1>
-        <div style={buttonContainerStyle}>
-          <Button
-            style={isHovered ? hoverButtonStyle : buttonStyle} // Apply style based on hover state
-            onMouseEnter={() => setIsHovered(true)} // Set hover state to true on mouse enter
-            onMouseLeave={() => setIsHovered(false)} // Set hover state to false on mouse leave
-            onClick={handleGoogleLogin}
-          >
-            <FaGoogle /> Login with Google
-          </Button>
+
+        {/* Local email/password login form (minimal) */}
+        <form onSubmit={handleLocalSignin} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{
+              padding: "8px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+              fontSize: "16px",
+            }}
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{
+              padding: "8px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+              fontSize: "16px",
+            }}
+            required
+          />
+
+          <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "8px" }}>
+            <button
+              type="submit"
+              style={{
+                ...buttonStyle,
+                width: "160px",
+                opacity: loading ? 0.7 : 1,
+              }}
+              disabled={loading}
+            >
+              {loading ? "Signing in..." : "Sign in"}
+            </button>
+
+            <Button
+              style={{ width: "200px", display: "flex", alignItems: "center", justifyContent: "center" }}
+              variant="light"
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              onClick={handleGoogleLogin}
+            >
+              <FaGoogle style={{ marginRight: "8px", color: isHovered ? "#f56664" : "#db4437" }} /> Login with Google
+            </Button>
+          </div>
+        </form>
+
+        <div style={{ textAlign: "center", marginTop: "10px" }}>
+          <small style={{ color: "#ccc" }}>
+            Don't have an account?{" "}
+            <span
+              style={{ color: "#fcaaa8", cursor: "pointer", textDecoration: "underline" }}
+              onClick={() => navigate("/register")}
+            >
+              Register
+            </span>
+          </small>
         </div>
       </div>
       <img src={"/assets/images/2.png"} alt="Below Image" style={imageBelowStyle} />
