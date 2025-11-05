@@ -11,6 +11,11 @@ import "./Register.css";
 import Badge from "react-bootstrap/Badge";
 import { v4 as uuidv4 } from "uuid";
 
+const API = axios.create({
+  baseURL: import.meta.env.VITE_SERVER_URL || "",
+  withCredentials: true, // send cookies for cross-site auth
+});
+
 const Register = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -49,7 +54,7 @@ const Register = () => {
     setLoading(true);
     const getUser = async () => {
       try {
-        const { data } = await axios.get("/user/unregistered/getDetails");
+        const { data } = await API.get("/user/unregistered/getDetails");
         console.log("User Data: ", data.data);
         const edu = data?.data?.education;
         edu.forEach((ele) => {
@@ -327,7 +332,7 @@ const Register = () => {
     if (check) {
       setSaveLoading(true);
       try {
-        const { data } = await axios.post("/user/unregistered/saveRegDetails", form);
+        const { data } = await API.post("/user/unregistered/saveRegDetails", form);
         toast.success("Details saved successfully");
       } catch (error) {
         console.log(error);
@@ -347,7 +352,7 @@ const Register = () => {
     if (check1 && check2) {
       setSaveLoading(true);
       try {
-        const { data } = await axios.post("/user/unregistered/saveEduDetail", form);
+        const { data } = await API.post("/user/unregistered/saveEduDetail", form);
         toast.success("Details saved successfully");
       } catch (error) {
         console.log(error);
@@ -369,7 +374,7 @@ const Register = () => {
     if (check1 && check2 && check3) {
       setSaveLoading(true);
       try {
-        const { data } = await axios.post("/user/unregistered/saveAddDetail", form);
+        const { data } = await API.post("/user/unregistered/saveAddDetail", form);
         toast.success("Details saved successfully");
       } catch (error) {
         console.log(error);
@@ -391,7 +396,7 @@ const Register = () => {
     if (check1 && check2 && check3) {
       setSaveLoading(true);
       try {
-        const { data } = await axios.post("/user/registerUser", form);
+        const { data } = await API.post("/user/registerUser", form);
         toast.success("Registration Successful");
         console.log("Data: ", data.data);
         navigate("/discover");
