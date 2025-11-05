@@ -57,8 +57,12 @@ const verifyJWT_username = asyncHandler(async (req, res, next) => {
   try {
     console.log("\n******** Inside verifyJWT_username Function ********");
 
-    // Accept cookie first, fallback to Authorization header
-    const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
+   // accept accessTokenRegistration (google), accessToken (local), or Authorization header
+    const token =
+      req.cookies?.accessTokenRegistration ||
+      req.cookies?.accessToken ||
+      req.header("Authorization")?.replace("Bearer ", "");
+
     if (!token) {
       console.log("token not found");
       throw new ApiError(401, "Please Login");
