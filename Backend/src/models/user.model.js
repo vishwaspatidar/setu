@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import bcrypt from "bcrypt";
 
 const userSchema = new Schema(
   {
@@ -15,9 +16,17 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
+
+    // <-- new password field (not required to avoid breaking existing OAuth users)
+    password: {
+      type: String,
+      default: null,
+    },
+
     picture: {
       type: String,
-      default: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcToK4qEfbnd-RN82wdL2awn_PMviy_pelocqQ",
+      default:
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcToK4qEfbnd-RN82wdL2awn_PMviy_pelocqQ",
     },
     rating: {
       type: Number,
@@ -112,5 +121,24 @@ const userSchema = new Schema(
   },
   { timestamps: true }
 );
+
+// Hash password before save if it was set/modified
+userSchema.pre("save", async function (next) {
+  try {
+    if (!this.isModified("password")) return next();
+    if (!this.password) return next(); // nothing to hash
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    return next();
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// Instance method to compare password
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  if (!this.password) return false; // user has no password set
+  return bcrypt.compare(candidatePassword, this.password);
+};
 
 export const User = mongoose.model("User", userSchema);
