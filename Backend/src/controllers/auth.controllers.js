@@ -1,3 +1,4 @@
+// Backend/src/controllers/auth.controllers.js
 import { generateJWTToken_email, generateJWTToken_username } from "../utils/generateJWTToken.js";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
@@ -58,7 +59,6 @@ export const handleGoogleLoginCallback = asyncHandler(async (req, res) => {
     const jwtToken = generateJWTToken_username(existingUser);
     const expiryDate = new Date(Date.now() + 1 * 60 * 60 * 1000);
     res.cookie("accessToken", jwtToken, { ...cookieOptions, expires: expiryDate });
-    // Redirect to frontend (change domain if needed for production)
     return res.redirect(`http://localhost:5173/discover`);
   }
 
