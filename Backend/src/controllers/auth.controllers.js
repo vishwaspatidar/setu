@@ -10,6 +10,9 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 
 dotenv.config();
 
+/**
+ * Passport Google Strategy (kept as-is)
+ */
 passport.use(
   new GoogleStrategy(
     {
@@ -32,16 +35,30 @@ export const googleAuthCallback = passport.authenticate("google", {
   session: false,
 });
 
+/**
+ * Cookie options helper:
+ * - In production (Render) we want secure cookies with sameSite='none' for cross-site usage.
+ * - In development we fall back to secure: false and sameSite: 'lax' for localhost convenience.
+ */
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+};
+
+/**
+ * Google login callback handler (kept behavior, but uses standardized cookie options)
+ */
 export const handleGoogleLoginCallback = asyncHandler(async (req, res) => {
   console.log("\n******** Inside handleGoogleLoginCallback function ********");
-  // console.log("User Google Info", req.user);
 
   const existingUser = await User.findOne({ email: req.user._json.email });
 
   if (existingUser) {
     const jwtToken = generateJWTToken_username(existingUser);
     const expiryDate = new Date(Date.now() + 1 * 60 * 60 * 1000);
-    res.cookie("accessToken", jwtToken, { httpOnly: true, expires: expiryDate, secure: false });
+    res.cookie("accessToken", jwtToken, { ...cookieOptions, expires: expiryDate });
+    // Redirect to frontend (change domain if needed for production)
     return res.redirect(`http://localhost:5173/discover`);
   }
 
@@ -56,20 +73,24 @@ export const handleGoogleLoginCallback = asyncHandler(async (req, res) => {
   }
   const jwtToken = generateJWTToken_email(unregisteredUser);
   const expiryDate = new Date(Date.now() + 0.5 * 60 * 60 * 1000);
-  res.cookie("accessTokenRegistration", jwtToken, { httpOnly: true, expires: expiryDate, secure: false });
+  res.cookie("accessTokenRegistration", jwtToken, { ...cookieOptions, expires: expiryDate });
   return res.redirect("http://localhost:5173/register");
 });
 
+/**
+ * Logout handler
+ */
 export const handleLogout = (req, res) => {
   console.log("\n******** Inside handleLogout function ********");
   res.clearCookie("accessToken");
+  res.clearCookie("accessTokenRegistration");
   return res.status(200).json(new ApiResponse(200, null, "User logged out successfully"));
 };
 
 /*
   Minimal local-auth additions (signup / signin)
-  - These are intentionally small and consistent with your existing cookie-based flow.
-  - They return ApiResponse(statusCode, data, message) like your other handlers.
+  - Small and consistent with your cookie-based flow.
+  - Returns ApiResponse(statusCode, data, message).
 */
 
 // POST /api/auth/signup
@@ -100,7 +121,7 @@ export const signup = asyncHandler(async (req, res) => {
   const expiryDate = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour
 
   // set cookie and return minimal user object + token
-  res.cookie("accessToken", jwtToken, { httpOnly: true, expires: expiryDate, secure: false });
+  res.cookie("accessToken", jwtToken, { ...cookieOptions, expires: expiryDate });
 
   const userPayload = {
     id: newUser._id,
@@ -131,7 +152,7 @@ export const signin = asyncHandler(async (req, res) => {
 
   const jwtToken = generateJWTToken_username(user);
   const expiryDate = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour
-  res.cookie("accessToken", jwtToken, { httpOnly: true, expires: expiryDate, secure: false });
+  res.cookie("accessToken", jwtToken, { ...cookieOptions, expires: expiryDate });
 
   const userPayload = {
     id: user._id,
