@@ -6,22 +6,15 @@ import passport from "passport";
 
 const app = express();
 
-// Read allowed origins from env; you can set a comma-separated list.
-// Example: CORS_ORIGINS="https://setu-pink.vercel.app,https://setu-2p9xwx8nb-vishwaspatidars-projects.vercel.app"
-const rawOrigins = process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || "http://localhost:5173";
-const allowedOrigins = rawOrigins.split(",").map((s) => s.trim().replace(/\/$/, "")); // strip trailing slash
-
+// WARNING: This setup allows requests from ANY origin.
+// It's convenient for debugging / previews but not recommended for production.
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // allow requests with no origin like curl / server-to-server
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like curl, Postman, or server-to-server)
       if (!origin) return callback(null, true);
-      const cleaned = origin.replace(/\/$/, "");
-      if (allowedOrigins.indexOf(cleaned) !== -1) {
-        return callback(null, true);
-      } else {
-        return callback(new Error("CORS not allowed for origin: " + origin), false);
-      }
+      // Echo back the origin — this effectively allows all origins while enabling credentials
+      return callback(null, true);
     },
     credentials: true,
   })
