@@ -18,8 +18,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleGoogleLogin = () => {
-    // keep this for Google OAuth (optional)
-    // for deployed app, you may want to replace localhost with your Render backend URL
+    // for deployed app, this will use VITE_SERVER_URL if set
     const googleUrl = `${import.meta.env.VITE_SERVER_URL || "http://localhost:8000"}/auth/google`;
     window.location.href = googleUrl;
   };
@@ -33,17 +32,30 @@ const Login = () => {
     setLoading(true);
     try {
       const res = await API.post("/api/auth/signin", { email, password });
-      // adapt to your ApiResponse shape: token may be in res.data.data.token or res.data.token
-      const token = res?.data?.data?.token || res?.data?.token;
+
+      // Token could be in different shapes depending on backend util
+      const token = res?.data?.data?.token || res?.data?.token || (res?.data?.data && res.data.data.token);
       if (token) {
+        // store token and set default header for future requests
         localStorage.setItem("token", token);
+        API.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       }
-      toast.success(res?.data?.message || "Login successful");
+
+      // Show backend message if provided, otherwise generic success
+      const message = res?.data?.message || res?.data?.msg || (res?.data?.data && res.data.message) || "Login successful";
+      toast.success(message);
+
+      // navigate after successful login
       navigate("/discover");
     } catch (err) {
-      console.error(err);
-      const msg = err?.response?.data?.message || "Login failed";
-      toast.error(msg);
+      console.error("Login error:", err);
+      const serverMsg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.response?.data?.msg ||
+        err?.message ||
+        "Login failed";
+      toast.error(serverMsg);
     } finally {
       setLoading(false);
     }
@@ -81,11 +93,6 @@ const Login = () => {
     textAlign: "center",
   };
 
-  const buttonContainerStyle = {
-    display: "flex",
-    justifyContent: "center",
-  };
-
   const buttonStyle = {
     backgroundColor: "#f56664", // Button background color
     color: "#fff", // Button text color
@@ -94,17 +101,6 @@ const Login = () => {
     padding: "10px 20px",
     borderRadius: "5px",
     cursor: "pointer",
-  };
-
-  const hoverButtonStyle = {
-    backgroundColor: "#fff", // Button background color on hover
-    color: "#f56664", // Button text color on hover
-    fontFamily: "Montserrat",
-    border: "none",
-    padding: "10px 20px",
-    borderRadius: "5px",
-    cursor: "pointer",
-    transition: "background-color 0.5s ease-in-out", // Transition effect
   };
 
   const imageStyle = {
